@@ -3,3 +3,5 @@ langchain-community>=0.0.10
 chromadb>=0.4.22
 sentence-transformers>=2.2.2
 tiktoken>=0.5.1
+pandas>=2.0.0
+torch>=2.0.0
