@@ -1,4 +1,10 @@
 postagens_tiktok.csv
 chroma_db/
-meu_ambiente/
 __pycache__/
+
+# Lista de possíveis nomes de Ambientes Virtuais
+meu_ambiente/
+venv/
+.venv/
+env/
+.env/
