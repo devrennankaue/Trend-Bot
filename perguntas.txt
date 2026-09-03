@@ -1,0 +1,64 @@
+### Tema 1 — Caracterização de tendência específica
+
+  1. O que é o challenge do [nome]?
+      • Pronta para perguntar: O que é o challenge de dança no TikTok?
+      • Alternativa no dataset: O que é o challenge de acting no TikTok?
+  2. Por que o áudio de [música] viralizou no TikTok?
+      • Pronta para perguntar: Por que o áudio de JETSKI do Pedro Sampaio viralizou no TikTok?
+      • Alternativas no dataset: Por que o áudio de Passinho Do Jamal viralizou no TikTok? ou Por que o áudio de Biquini Cavadinho viralizou no TikTok?
+  3. Como funciona a trend do "POV:" no TikTok brasileiro?
+      • Pronta para perguntar: Como funciona a trend do "POV:" no TikTok brasileiro?
+      • (O termo "POV" aparece centenas de vezes no dataset, associado a situações cotidianas cômicas, memes e transformações de beleza).
+  4. Que tipo de vídeo usa a hashtag #[hashtag]?
+      • Pronta para perguntar: Que tipo de vídeo usa a hashtag #capcutpioneer?
+      • Alternativas no dataset: Que tipo de vídeo usa a hashtag #futebolbrasileiro? ou Que tipo de vídeo usa a hashtag #tiktoknotícias?
+  5. Quem costuma aparecer nos vídeos sobre [tema]?
+      • Pronta para perguntar: Quem costuma aparecer nos vídeos sobre futebol?
+      • Alternativa no dataset: Quem costuma aparecer nos vídeos sobre BBB26?
+  6. O que os criadores estão fazendo com a música [nome]?
+      • Pronta para perguntar: O que os criadores estão fazendo com a música Suspense, horror, piano and music box? (áudio de suspense com mais de 50 ocorrências no dataset, usado em notícias e crimes)
+      • Alternativa no dataset: O que os criadores estão fazendo com a música Six Seven?
+  7. Qual é o formato típico de um vídeo viral de [categoria]?
+      • Pronta para perguntar: Qual é o formato típico de um vídeo viral de humor?
+      • Alternativas no dataset: Qual é o formato típico de um vídeo viral de beleza e maquiagem? ou Qual é o formato típico de um vídeo viral de dicas?
+
+  ──────
+  ### Tema 2 — Análise temática
+
+  8. O que o TikTok BR está falando sobre [tema]?
+      • Pronta para perguntar: O que o TikTok BR está falando sobre inteligência artificial?
+      • Alternativas no dataset: O que o TikTok BR está falando sobre BBB26? ou O que o TikTok BR está falando sobre música sertaneja?
+  9. Como os criadores brasileiros reagem a [assunto/evento]?
+      • Pronta para perguntar: Como os criadores brasileiros reagem a jogos da Libertadores?
+      • Alternativas no dataset: Como os criadores brasileiros reagem a notícias de eleições? ou Como os criadores brasileiros reagem ao BBB26?
+  10. Qual é o tom dos vídeos sobre [produto/marca]?
+      • Pronta para perguntar: Qual é o tom dos vídeos sobre Free Fire? (a marca/jogo mais citada no CSV, com +240 ocorrências)
+      • Alternativas no dataset: Qual é o tom dos vídeos sobre iPhone? ou Qual é o tom dos vídeos sobre Netflix?
+  11. Que assuntos aparecem junto com conteúdo de [categoria]?
+      • Pronta para perguntar: Que assuntos aparecem junto com conteúdo de beleza?
+      • Alternativas no dataset: Que assuntos aparecem junto com conteúdo de futebol? ou Que assuntos aparecem junto com conteúdo de novelas?
+  12. O que os usuários do TikTok comentam sobre [fenômeno]?
+      • Pronta para perguntar: O que os usuários do TikTok comentam sobre ferramentas de IA e filtros?
+      • Alternativa no dataset: O que os usuários do TikTok comentam sobre o Flamengo?
+  13. Como o tema [assunto] é retratado nos vídeos brasileiros?
+      • Pronta para perguntar: Como o tema novelas é retratado nos vídeos brasileiros?
+      • Alternativa no dataset: Como o tema política é retratado nos vídeos brasileiros?
+  14. Quais criadores falam sobre [tema] com mais frequência?
+      • Pronta para perguntar: Quais criadores falam sobre esportes e futebol com mais frequência? (espera-se recuperar @tntsportsbr, @espnbrasil, @cazetv, @geglobo)
+      • Alternativa no dataset: Quais criadores falam sobre notícias com mais frequência? (espera-se @metropolesoficial, @g1, @sbtnews, @jovempannews)
+
+  ──────
+  ### Tema 3 — Comparativas e relacionais
+
+  15. Que hashtags aparecem junto com #[hashtag]?
+      • Pronta para perguntar: Que hashtags aparecem junto com #capcut?
+      • Alternativas no dataset: Que hashtags aparecem junto com #futebol? ou Que hashtags aparecem junto com #bbb26?
+  16. Qual a diferença entre os vídeos de [tema A] e [tema B]?
+      • Pronta para perguntar: Qual a diferença entre os vídeos de humor e notícias?
+      • Alternativas no dataset: Qual a diferença entre os vídeos de futebol e novelas? ou Qual a diferença entre os vídeos de funk e sertanejo?
+  17. Em que outros contextos o áudio de [música] aparece além de [uso principal]?
+      • Pronta para perguntar: Em que outros contextos o áudio de Suspense, horror, piano and music box aparece além de crimes e mistérios?
+      • Alternativa no dataset: Em que outros contextos o áudio de som original - TV Globo aparece além das transmissões oficiais?
+  18. Que tópicos estão associados ao conteúdo de [categoria]?
+      • Pronta para perguntar: Que tópicos estão associados ao conteúdo de marketing digital?
+      • Alternativa no dataset: Que tópicos estão associados ao conteúdo de games?
