@@ -1,10 +1,30 @@
+# Arquivos de dados brutos e volumosos
 postagens_tiktok.csv
-chroma_db/
-__pycache__/
+data/raw/*.csv
 
-# Lista de possíveis nomes de Ambientes Virtuais
+# Bases de dados vetoriais locais ChromaDB
+chroma_db/
+data/chroma_db/
+chroma_test/
+chroma_clean_test/
+*.sqlite3
+*.bin
+
+# Caches e arquivos temporários do Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Ambientes Virtuais
 meu_ambiente/
 venv/
 .venv/
 env/
 .env/
+*.env
+
+# Relatórios e logs de benchmark gerados
+benchmark/reports/
+benchmark/*.csv
+resultados_benchmark.csv

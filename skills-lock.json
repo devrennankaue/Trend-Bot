@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "codenavi": {
+      "source": "tech-leads-club/agent-skills",
+      "sourceType": "github",
+      "skillPath": "packages/skills-catalog/skills/(development)/codenavi/SKILL.md",
+      "computedHash": "ddca2f0860152b4c864a9d657c3cf8183597c8450f1ddfc7090953afece4cdf0"
+    },
+    "docs-writer": {
+      "source": "tech-leads-club/agent-skills",
+      "sourceType": "github",
+      "skillPath": "packages/skills-catalog/skills/(development)/docs-writer/SKILL.md",
+      "computedHash": "50952880c5c74e9ceddf2250a199ef2e6f28cccdd381c193f67aebee85749f61"
+    },
+    "mermaid-studio": {
+      "source": "tech-leads-club/agent-skills",
+      "sourceType": "github",
+      "skillPath": "packages/skills-catalog/skills/(tooling)/mermaid-studio/SKILL.md",
+      "computedHash": "ac6c344e21319a5c7426a1b8c21229afe9a687aa743bd366bf11cad66bef328d"
+    },
+    "tlc-spec-driven": {
+      "source": "tech-leads-club/agent-skills",
+      "sourceType": "github",
+      "skillPath": "packages/skills-catalog/skills/(development)/tlc-spec-driven/SKILL.md",
+      "computedHash": "9d7a9b4fc3eb125a0abfc866642ae498b456e3c31182470125d24b0c0e42311a"
+    }
+  }
+}
