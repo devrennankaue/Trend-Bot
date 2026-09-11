@@ -14,6 +14,16 @@ except ImportError:
     torch = None
 
 
+def checar_conexao_ollama(ollama_url: str = "http://localhost:11434", timeout: float = 2.0) -> bool:
+    """Verifica se o serviço do Ollama está em execução e respondendo."""
+    try:
+        req = urllib.request.Request(f"{ollama_url}/api/tags", method="GET")
+        with urllib.request.urlopen(req, timeout=timeout):
+            return True
+    except Exception:
+        return False
+
+
 def limpar_memoria_gpu(model_name: Optional[str] = None, ollama_url: str = "http://localhost:11434"):
     """
     Otimização de Hardware para NVIDIA RTX 4060 Ti e processadores modernos:

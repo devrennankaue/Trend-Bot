@@ -13,6 +13,7 @@ from src import (
     TrendRetriever,
     TrendDataIngestor,
     limpar_memoria_gpu,
+    checar_conexao_ollama,
     MODELOS_PADRAO,
     resolver_caminho_csv,
     resolver_caminho_db,
@@ -70,10 +71,17 @@ def main():
     # 3. Menu Interativo de Seleção do Modelo Inicial
     modelo_inicial = menu_selecao_modelo()
 
-    # 4. Inicia o Bot
+    # 4. Verificação de Conectividade com o Ollama
+    if not checar_conexao_ollama():
+        print("⚠️  Aviso: O serviço do Ollama não está ativo em http://localhost:11434.")
+        print("💡 Para iniciar o Ollama no Windows:")
+        print("   - Abra o aplicativo 'Ollama' pelo Menu Iniciar, OU")
+        print("   - Em um terminal, execute: ollama serve\n")
+
+    # 5. Inicia o Bot
     bot = TrendBot(retriever=retriever, model_name=modelo_inicial, keep_alive="0")
 
-    # 5. Loop do Chat Interativo
+    # 6. Loop do Chat Interativo
     print("="*65)
     print(f" TrendBot-BR Online com [{bot.model_name.upper()}]!")
     print(" Comandos úteis:")
@@ -108,7 +116,12 @@ def main():
             limpar_memoria_gpu(bot.model_name)
             break
         except Exception as e:
-            print(f"\n❌ Erro durante a execução: {e}\n")
+            msg = str(e)
+            if "10061" in msg or "Failed to establish a new connection" in msg or "Connection refused" in msg:
+                print(f"\n❌ Erro de conexão com o Ollama: O serviço não está respondendo em http://localhost:11434.")
+                print("💡 Certifique-se de que o Ollama está rodando (`ollama serve` ou abra o app Ollama).\n")
+            else:
+                print(f"\n❌ Erro durante a execução: {e}\n")
 
 
 if __name__ == "__main__":

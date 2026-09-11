@@ -11,6 +11,13 @@ DIRETORIO_RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if DIRETORIO_RAIZ not in sys.path:
     sys.path.insert(0, DIRETORIO_RAIZ)
 
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 from src.config import (
     resolver_caminho_db,
     DEFAULT_EMBEDDING_MODEL,
@@ -19,7 +26,8 @@ from src.config import (
 )
 from src.memory import (
     limpar_memoria_gpu,
-    obter_metricas_memoria
+    obter_metricas_memoria,
+    checar_conexao_ollama
 )
 
 
@@ -269,6 +277,13 @@ def executar_benchmark_tecnico(
     """
     inicio_benchmark = time.time()
     data_inicio = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    if not checar_conexao_ollama(DEFAULT_OLLAMA_URL):
+        print(f"❌ O serviço do Ollama não está ativo em '{DEFAULT_OLLAMA_URL}'.")
+        print("💡 Para iniciar o Ollama no Windows:")
+        print("   - Abra o aplicativo 'Ollama' pelo Menu Iniciar, OU")
+        print("   - Em um terminal, execute: ollama serve\n")
+        return
 
     caminho_db_resolvido = resolver_caminho_db(caminho_db)
     

@@ -19,7 +19,7 @@ from .config import (
     resolver_caminho_csv,
     resolver_caminho_db
 )
-from .memory import limpar_memoria_gpu, obter_metricas_memoria
+from .memory import limpar_memoria_gpu, obter_metricas_memoria, checar_conexao_ollama
 try:
     from .ingestor import TrendDataIngestor
 except ImportError:
@@ -41,6 +41,7 @@ __all__ = [
     "TrendDataIngestor",
     "limpar_memoria_gpu",
     "obter_metricas_memoria",
+    "checar_conexao_ollama",
     "MODELOS_PADRAO",
     "DEFAULT_EMBEDDING_MODEL",
     "DEFAULT_OLLAMA_URL",
