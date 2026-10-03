@@ -99,7 +99,7 @@ The assistant currently sends every question through semantic retrieval and gene
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
 | GDA-01 | P1: Deterministic Database Answers | Execute | Implementing |
-| GDA-02 | P1: Deterministic Database Answers | Tasks | Pending |
+| GDA-02 | P1: Deterministic Database Answers | Execute | Implementing |
 | GDA-03 | P2: Evidence-Grounded RAG Fallback | Tasks | Pending |
 | GDA-04 | P2: Evidence-Grounded RAG Fallback | Tasks | Pending |
 | GDA-05 | P3: Complete and Reproducible Indexing | Tasks | Pending |

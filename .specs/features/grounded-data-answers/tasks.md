@@ -73,6 +73,8 @@ T5 → T6
 
 ### T2: Implement deterministic factual intents
 
+**Status**: ✅ Done (`feat(analytics): answer supported data questions`)
+
 **What**: Parse supported Portuguese count and ranking questions and render calculated local-corpus answers.
 **Where**: `src/analytics.py`, `tests/test_analytics.py`
 **Depends on**: T1
