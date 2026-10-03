@@ -50,6 +50,14 @@
 - **Date**: 2026-09-03
 - **Status**: active
 
+### AD-007
+- **Decision**: Consultas factuais suportadas serão resolvidas localmente por uma camada determinística de analytics antes do fallback RAG.
+- **Reason**: Contagens, rankings e filtros precisam refletir os dados tabulares, não uma síntese probabilística de poucos chunks.
+- **Trade-off**: A primeira versão aceita apenas intenções explícitas e auditáveis, em vez de SQL produzido livremente por LLM.
+- **Scope**: Roteamento de perguntas e acesso ao corpus (`src/analytics.py`, `src/bot.py`).
+- **Date**: 2026-10-03
+- **Status**: active
+
 ## Handoff
 
 - **Feature**: benchmark-markdown-reports (.specs/features/benchmark-markdown-reports/)
