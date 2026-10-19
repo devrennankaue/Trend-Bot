@@ -20,20 +20,9 @@ from .config import (
     resolver_caminho_db
 )
 from .memory import limpar_memoria_gpu, obter_metricas_memoria
-try:
-    from .ingestor import TrendDataIngestor
-except ImportError:
-    TrendDataIngestor = None
-
-try:
-    from .retriever import TrendRetriever
-except ImportError:
-    TrendRetriever = None
-
-try:
-    from .bot import TrendBot
-except ImportError:
-    TrendBot = None
+from .ingestor import TrendDataIngestor
+from .retriever import TrendRetriever
+from .bot import TrendBot
 
 __all__ = [
     "TrendBot",

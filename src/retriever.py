@@ -1,71 +1,42 @@
-import warnings
-from typing import Dict, Any, Optional
+"""Busca semântica local sem dependências nativas."""
+import json
+import math
+import os
+from typing import Any, Dict, List, Optional
 
-try:
-    import torch
-except ImportError:
-    torch = None
-
-# Supressão de avisos de depreciação para saída limpa
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-warnings.filterwarnings("ignore", category=UserWarning)
-
-# Imports modernos do ecossistema LangChain com fallback resiliente
-try:
-    from langchain_huggingface import HuggingFaceEmbeddings
-except ImportError:
-    from langchain_community.embeddings import HuggingFaceEmbeddings
-
-try:
-    from langchain_chroma import Chroma
-except ImportError:
-    from langchain_community.vectorstores import Chroma
-
-from .config import (
-    DEFAULT_EMBEDDING_MODEL,
-    DEFAULT_RETRIEVAL_K,
-    DEFAULT_FETCH_K,
-    resolver_caminho_db
-)
+from .config import (DEFAULT_EMBEDDING_MODEL, DEFAULT_OLLAMA_URL, DEFAULT_RETRIEVAL_K,
+                     resolver_caminho_db)
+from .ollama_embeddings import OllamaEmbeddings
 
 
 class TrendRetriever:
-    """
-    Responsável exclusivo pela conexão com o ChromaDB e pela busca semântica,
-    mantendo a base vetorial isolada da lógica de orquestração do LLM.
-    """
-    def __init__(
-        self, 
-        persist_directory: Optional[str] = None, 
-        embeddings: Optional[HuggingFaceEmbeddings] = None
-    ):
-        self.device_type = 'cuda' if torch is not None and torch.cuda.is_available() else 'cpu'
+    def __init__(self, persist_directory: Optional[str] = None, embeddings: Optional[Any] = None):
         self.persist_directory = resolver_caminho_db(persist_directory)
-        
-        if embeddings:
-            self.embeddings = embeddings
-        else:
-            self.embeddings = HuggingFaceEmbeddings(
-                model_name=DEFAULT_EMBEDDING_MODEL,
-                model_kwargs={'device': self.device_type},
-                encode_kwargs={'normalize_embeddings': False}
-            )
-        self.vectorstore = Chroma(
-            persist_directory=self.persist_directory, 
-            embedding_function=self.embeddings
-        )
-        
+        self.embeddings = embeddings or OllamaEmbeddings(DEFAULT_EMBEDDING_MODEL, DEFAULT_OLLAMA_URL)
+        index_path = os.path.join(self.persist_directory, "indice_ollama.json")
+        if not os.path.exists(index_path):
+            raise RuntimeError(f"Índice não encontrado em '{index_path}'.")
+        with open(index_path, encoding="utf-8") as index_file:
+            self.documents = json.load(index_file)
+        self.k = DEFAULT_RETRIEVAL_K
+        self.hashtag_filter = None
+
     def get_retriever(self, k: int = DEFAULT_RETRIEVAL_K, hashtag_filter: Optional[str] = None):
-        """
-        Retorna o retriever configurado com MMR (Maximal Marginal Relevance)
-        para garantir que os chunks recuperados sejam diversos e não repitam o mesmo vídeo.
-        """
-        search_kwargs: Dict[str, Any] = {"k": k, "fetch_k": DEFAULT_FETCH_K}
-        if hashtag_filter:
-            search_kwargs["filter"] = {"hashtags": {"$contains": hashtag_filter}}
-            return self.vectorstore.as_retriever(search_kwargs=search_kwargs)
-            
-        return self.vectorstore.as_retriever(
-            search_type="mmr",
-            search_kwargs=search_kwargs
-        )
+        self.k = k
+        self.hashtag_filter = hashtag_filter
+        return self
+
+    @staticmethod
+    def _similarity(first: List[float], second: List[float]) -> float:
+        product = sum(a * b for a, b in zip(first, second))
+        norm_first = math.sqrt(sum(a * a for a in first))
+        norm_second = math.sqrt(sum(b * b for b in second))
+        return product / (norm_first * norm_second) if norm_first and norm_second else 0.0
+
+    def search(self, question: str) -> List[Dict[str, Any]]:
+        query_vector = self.embeddings.embed_query(question)
+        candidates = self.documents
+        if self.hashtag_filter:
+            filter_text = self.hashtag_filter.lower()
+            candidates = [doc for doc in candidates if filter_text in doc["metadata"].get("hashtags", "").lower()]
+        return sorted(candidates, key=lambda doc: self._similarity(query_vector, doc["embedding"]), reverse=True)[:self.k]

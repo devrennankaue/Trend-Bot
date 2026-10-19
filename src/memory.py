@@ -8,11 +8,6 @@ import urllib.request
 import urllib.error
 from typing import Dict, Optional
 
-try:
-    import torch
-except ImportError:
-    torch = None
-
 
 def limpar_memoria_gpu(model_name: Optional[str] = None, ollama_url: str = "http://localhost:11434"):
     """
@@ -20,7 +15,8 @@ def limpar_memoria_gpu(model_name: Optional[str] = None, ollama_url: str = "http
     1. Descarrega o modelo Ollama especificado da VRAM via HTTP (keep_alive: 0).
     2. Consulta o endpoint /api/ps para descarregar qualquer modelo residual ativo.
     3. Executa coleta de lixo do Python (gc.collect).
-    4. Esvazia o cache de tensores alocados no PyTorch (torch.cuda.empty_cache).
+    4. Executa a coleta de lixo do Python. A inferência e os embeddings são
+       descarregados pelo próprio Ollama.
     """
     if model_name:
         try:
@@ -56,14 +52,6 @@ def limpar_memoria_gpu(model_name: Optional[str] = None, ollama_url: str = "http
         pass
 
     gc.collect()
-
-    if torch is not None and torch.cuda.is_available():
-        torch.cuda.empty_cache()
-        if hasattr(torch.cuda, "ipc_collect"):
-            try:
-                torch.cuda.ipc_collect()
-            except Exception:
-                pass
 
     time.sleep(0.5)
 

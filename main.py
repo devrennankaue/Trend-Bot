@@ -3,6 +3,9 @@ import os
 import sys
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(errors="replace")
+
 # Adiciona a raiz do projeto ao sys.path para garantir imports consistentes
 DIRETORIO_RAIZ = Path(__file__).resolve().parent
 if str(DIRETORIO_RAIZ) not in sys.path:
@@ -37,7 +40,7 @@ def menu_selecao_modelo() -> str:
     else:
         modelo_selecionado = "llama3"
 
-    print(f"\n🚀 Modelo ativo selecionado: [{modelo_selecionado.upper()}]\n")
+    print(f"\nModelo ativo selecionado: [{modelo_selecionado.upper()}]\n")
     return modelo_selecionado
 
 
@@ -52,8 +55,8 @@ def main():
     # 1. Ingestão Inteligente: indexa apenas se a base ChromaDB não existir
     if not os.path.exists(db_dir) or not os.listdir(db_dir):
         if not os.path.exists(csv_path):
-            print(f"❌ Arquivo de dados não encontrado em '{csv_path}'.")
-            print(f"💡 Dica: Adicione 'postagens_tiktok.csv' na pasta 'data/raw/' ou na raiz.")
+            print(f"Arquivo de dados não encontrado em '{csv_path}'.")
+            print("Dica: Adicione 'postagens_tiktok.csv' na pasta 'data/raw/' ou na raiz.")
             sys.exit(1)
 
         print(f"[Setup] Criando base vetorial a partir de '{csv_path}'...")
@@ -90,7 +93,7 @@ def main():
                 continue
 
             if user_input.lower() in ['sair', 'exit', 'quit']:
-                print(f"\nTrendBot-BR: Falou, valeu pelo papo! Nos vemos na FY. 👋\n")
+                print("\nTrendBot-BR: Falou, valeu pelo papo! Nos vemos na FY.\n")
                 limpar_memoria_gpu(bot.model_name)
                 break
 
@@ -108,7 +111,7 @@ def main():
             limpar_memoria_gpu(bot.model_name)
             break
         except Exception as e:
-            print(f"\n❌ Erro durante a execução: {e}\n")
+            print(f"\nErro durante a execução: {e}\n")
 
 
 if __name__ == "__main__":

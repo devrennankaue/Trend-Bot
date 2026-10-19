@@ -252,8 +252,8 @@ def exportar_para_markdown(
     with open(caminho_latest, "w", encoding="utf-8") as f:
         f.write(conteudo_md)
 
-    print(f"📝 Relatório Markdown individual gerado: {caminho_relatorio}")
-    print(f"📌 Relatório mais recente atualizado em: {caminho_latest}")
+    print(f"Relatorio Markdown individual gerado: {caminho_relatorio}")
+    print(f"Relatorio mais recente atualizado em: {caminho_latest}")
     return caminho_relatorio
 
 
@@ -273,7 +273,7 @@ def executar_benchmark_tecnico(
     caminho_db_resolvido = resolver_caminho_db(caminho_db)
     
     if not os.path.exists(caminho_db_resolvido) or not os.listdir(caminho_db_resolvido):
-        print(f"❌ Banco vetorial não encontrado em '{caminho_db_resolvido}'. Execute o main.py primeiro.")
+        print(f"Banco vetorial não encontrado em '{caminho_db_resolvido}'. Execute o main.py primeiro.")
         return
 
     perguntas = carregar_perguntas_teste()
