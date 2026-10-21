@@ -4,8 +4,8 @@ import math
 import os
 from typing import Any, Dict, List, Optional
 
-from .config import (DEFAULT_EMBEDDING_MODEL, DEFAULT_OLLAMA_URL, DEFAULT_RETRIEVAL_K,
-                     resolver_caminho_db)
+from .config import (DEFAULT_EMBEDDING_MODEL, DEFAULT_FETCH_K, DEFAULT_MMR_LAMBDA,
+                     DEFAULT_OLLAMA_URL, DEFAULT_RETRIEVAL_K, resolver_caminho_db)
 from .ollama_embeddings import OllamaEmbeddings
 
 
@@ -39,4 +39,33 @@ class TrendRetriever:
         if self.hashtag_filter:
             filter_text = self.hashtag_filter.lower()
             candidates = [doc for doc in candidates if filter_text in doc["metadata"].get("hashtags", "").lower()]
-        return sorted(candidates, key=lambda doc: self._similarity(query_vector, doc["embedding"]), reverse=True)[:self.k]
+
+        ranked = sorted(
+            ((doc, self._similarity(query_vector, doc["embedding"])) for doc in candidates),
+            key=lambda item: item[1],
+            reverse=True,
+        )[:DEFAULT_FETCH_K]
+        selected: List[Dict[str, Any]] = []
+        selected_video_ids = set()
+
+        while ranked and len(selected) < self.k:
+            distinct_candidates = [
+                item for item in ranked
+                if item[0]["metadata"].get("video_id") not in selected_video_ids
+            ]
+            pool = distinct_candidates or ranked
+
+            def mmr_score(item):
+                document, relevance = item
+                redundancy = max(
+                    (self._similarity(document["embedding"], chosen["embedding"]) for chosen in selected),
+                    default=0.0,
+                )
+                return DEFAULT_MMR_LAMBDA * relevance - (1 - DEFAULT_MMR_LAMBDA) * redundancy
+
+            chosen, _ = max(pool, key=mmr_score)
+            selected.append(chosen)
+            selected_video_ids.add(chosen["metadata"].get("video_id"))
+            ranked = [item for item in ranked if item[0] is not chosen]
+
+        return selected

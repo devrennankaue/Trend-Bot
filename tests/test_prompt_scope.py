@@ -30,6 +30,8 @@ class TestPromptScope(unittest.TestCase):
     def test_exige_evidencias_concretas(self):
         self.assertIn("hashtags, músicas, criadores, datas, métricas", PROMPT_TEMPLATE)
         self.assertIn("não apresente interpretações como certezas", PROMPT_TEMPLATE)
+        self.assertIn("Vídeo ID", PROMPT_TEMPLATE)
+        self.assertIn("três vídeos distintos", PROMPT_TEMPLATE)
 
 
 if __name__ == "__main__":

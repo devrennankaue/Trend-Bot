@@ -24,6 +24,12 @@ DEFAULT_CHUNK_SIZE = 500
 DEFAULT_CHUNK_OVERLAP = 50
 DEFAULT_RETRIEVAL_K = 4
 DEFAULT_FETCH_K = 25
+DEFAULT_MMR_LAMBDA = 0.7
+MIN_DISTINCT_VIDEOS_FOR_GENERALIZATION = 3
+INSUFFICIENT_EVIDENCE_MESSAGE = (
+    "Com base no corpus atual de vídeos indexados, não foram encontradas informações "
+    "suficientes para caracterizar esse padrão."
+)
 
 # Configurações do LLM
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
@@ -55,6 +61,8 @@ REGRAS OBRIGATÓRIAS DE RESPOSTA:
    - Sempre que existirem no contexto, cite evidências concretas como hashtags, músicas, criadores, datas, métricas ou exemplos de vídeos.
    - Diferencie claramente fato observado de limitação da base; não apresente interpretações como certezas.
    - Organize a resposta em parágrafos curtos ou tópicos objetivos. Não use linguagem promocional, especulativa ou subjetiva.
+   - O contexto identifica cada evidência pelo "Vídeo ID". Ao afirmar um dado, cite o identificador do vídeo correspondente entre colchetes, por exemplo: [Vídeo ID: 123].
+   - Não descreva um formato, tema ou padrão como "típico", "comum" ou "geral" sem evidência de pelo menos três vídeos distintos no contexto.
 
 4. Idioma: português do Brasil claro, preciso e impessoal.
 
