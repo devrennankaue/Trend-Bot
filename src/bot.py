@@ -2,22 +2,21 @@
 import json
 import re
 import urllib.request
-from typing import Dict, List, Optional
+from typing import Dict, List
 
-from .config import (DEFAULT_KEEP_ALIVE, DEFAULT_OLLAMA_URL, DEFAULT_TEMPERATURE,
+from .config import (DEFAULT_KEEP_ALIVE, DEFAULT_MODEL, DEFAULT_OLLAMA_URL, DEFAULT_TEMPERATURE,
                      INSUFFICIENT_EVIDENCE_MESSAGE, MIN_DISTINCT_VIDEOS_FOR_GENERALIZATION,
                      PROMPT_TEMPLATE)
-from .memory import limpar_memoria_gpu
 
 
 class TrendBot:
-    def __init__(self, retriever, model_name: str = "llama3", base_url: str = DEFAULT_OLLAMA_URL,
+    def __init__(self, retriever, base_url: str = DEFAULT_OLLAMA_URL,
                  temperature: float = DEFAULT_TEMPERATURE, keep_alive: str = DEFAULT_KEEP_ALIVE):
         self.retriever = retriever
         self.base_url = base_url.rstrip("/")
         self.temperature = temperature
         self.keep_alive = keep_alive
-        self.model_name = model_name
+        self.model_name = DEFAULT_MODEL
         self.chat_history: List[str] = []
 
     def _answer(self, question: str, history: str) -> str:
@@ -54,10 +53,6 @@ class TrendBot:
         markers = ("típico", "tipico", "comum", "geralmente", "padrão", "padrao", "mais frequente")
         return any(marker in normalized for marker in markers)
 
-    def trocar_modelo(self, novo_modelo: str):
-        limpar_memoria_gpu(self.model_name, self.base_url)
-        self.model_name = novo_modelo
-
     def ask(self, question: str) -> str:
         normalized = re.sub(r"[^\w\s]", "", question.lower()).strip()
         if normalized in {"oi", "ola", "olá", "bom dia", "boa tarde", "boa noite", "quem e voce", "quem é você"}:
@@ -66,13 +61,3 @@ class TrendBot:
         answer = self._answer(question, history)
         self.chat_history.extend([f"Usuário: {question}", f"TrendBot ({self.model_name}): {answer}"])
         return answer
-
-    def comparar(self, question: str, modelos: Optional[List[str]] = None) -> Dict[str, str]:
-        original = self.model_name
-        history = "\n".join(self.chat_history[-4:]) or "Nenhuma conversa anterior."
-        answers = {}
-        for model in modelos or ["llama3", "mistral"]:
-            self.trocar_modelo(model)
-            answers[model] = self._answer(question, history)
-        self.trocar_modelo(original)
-        return answers

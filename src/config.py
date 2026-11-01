@@ -8,12 +8,8 @@ RAW_DATA_DIR = DATA_DIR / "raw"
 DEFAULT_CHROMA_DIR = str(DATA_DIR / "chroma_ollama_db")
 DEFAULT_CSV_PATH = str(RAW_DATA_DIR / "postagens_tiktok.csv")
 
-# Modelos locais padrão suportados via Ollama
-MODELOS_PADRAO = {
-    "1": ("llama3", "Meta LLaMA 3 (8B) - Alta fluidez e velocidade"),
-    "2": ("mistral", "Mistral (7B) - Raciocínio conciso e analítico"),
-    "3": ("gemma:7b", "Gemma (7B) - Modelo da Google DeepMind")
-}
+# Único modelo de geração disponibilizado pela aplicação.
+DEFAULT_MODEL = "llama3"
 
 # Configurações de Embeddings e Retrieval
 # Os embeddings são gerados localmente pelo Ollama para evitar a dependência do
@@ -100,17 +96,5 @@ def resolver_caminho_csv(csv_path: str = None) -> str:
 
 
 def resolver_caminho_db(db_path: str = None) -> str:
-    """Resolve o caminho da base vetorial ChromaDB com fallback."""
-    if db_path:
-        return db_path
-
-    # 1. Procura em data/chroma_db
-    if os.path.exists(DEFAULT_CHROMA_DIR) and os.listdir(DEFAULT_CHROMA_DIR):
-        return DEFAULT_CHROMA_DIR
-
-    # 2. Procura em chroma_db (raiz)
-    raiz_db = str(PROJECT_ROOT / "chroma_db")
-    if os.path.exists(raiz_db) and os.listdir(raiz_db):
-        return raiz_db
-
+    """Retorna o caminho informado ou o diretório padrão do índice JSON."""
     return db_path or DEFAULT_CHROMA_DIR

@@ -17,7 +17,7 @@ Trend-Bot/
 │
 ├── data/                           # Armazenamento de dados e bases vetoriais
 │   ├── raw/                        # Dados brutos (ex: postagens_tiktok.csv)
-│   ├── chroma_db/                  # Banco vetorial persistido pelo ChromaDB
+│   ├── chroma_ollama_db/            # Índice JSON local com textos e embeddings
 │   └── perguntas.txt               # Banco temático de perguntas para testes
 │
 ├── docs/                           # Documentação e relatórios do projeto
@@ -29,11 +29,11 @@ Trend-Bot/
 │
 ├── src/                            # Código-fonte modularizado
 │   ├── __init__.py                 # Exportação do pacote
-│   ├── bot.py                      # Orquestrador TrendBot (LCEL + histórico + prompt)
+│   ├── bot.py                      # Orquestrador TrendBot (histórico + prompt)
 │   ├── config.py                   # Configurações globais, paths e prompts
 │   ├── ingestor.py                 # Pipeline de ETL, chunking e indexação vetorial
 │   ├── memory.py                   # Gestão de VRAM GPU (NVIDIA) e RAM do sistema
-│   └── retriever.py                # Recuperação semântica com MMR (Maximal Marginal Relevance)
+│   └── retriever.py                # Busca semântica MMR no índice JSON
 │
 ├── .gitignore                      # Regras de exclusão do Git
 ├── main.py                         # Ponto de entrada da CLI interativa
@@ -50,8 +50,7 @@ Trend-Bot/
 3. **Modelos locais do Ollama** baixados:
    ```bash
    ollama pull llama3
-   ollama pull mistral
-   ollama pull gemma:7b
+   ollama pull nomic-embed-text
    ```
 4. *(Opcional, recomendado)*: GPU NVIDIA com suporte a CUDA para aceleração de embeddings e inferência.
 
@@ -79,7 +78,7 @@ Trend-Bot/
 
 4. **Prepare os dados:**
    - Coloque o arquivo de postagens em `data/raw/postagens_tiktok.csv`.
-   - Na primeira execução, o sistema criará automaticamente a base vetorial em `data/chroma_db/`.
+   - Na primeira execução, o sistema criará o índice JSON em `data/chroma_ollama_db/`.
 
 ---
 
@@ -92,9 +91,8 @@ python main.py
 ```
 
 **Funcionalidades no chat:**
-- **Menu interativo** de escolha do LLM na inicialização (`llama3`, `mistral`, `gemma:7b`).
-- **`/modelo`**: Alterne o modelo ativo a qualquer momento no meio da conversa sem perder o histórico recente.
-- **`sair`**, **`exit`** ou **`quit`**: Encerra a sessão liberando a VRAM da GPU.
+- Usa somente o modelo de geração `llama3`.
+- **`sair`**, **`exit`** ou **`quit`**: Encerra a sessão e solicita ao Ollama que descarregue o modelo.
 
 ### 2. Executar o Benchmark Técnico
 Para medir tempo de inferência, uso de RAM/VRAM, taxa de sucesso e gerar relatórios estruturados em Markdown:
@@ -110,7 +108,7 @@ Os resultados serão gravados em:
 
 ## 🧠 Detalhes Técnicos
 
-- **Modelo de Embeddings:** `neuralmind/bert-base-portuguese-cased` (BERTimbau), calibrado para semântica do português brasileiro.
-- **Banco Vetorial:** `ChromaDB` persistido localmente.
+- **Modelo de Embeddings:** `nomic-embed-text`, executado localmente pelo Ollama.
+- **Índice:** arquivo JSON local com textos, metadados e vetores; não usa ChromaDB.
 - **Estratégia de Recuperação:** `MMR` (*Maximal Marginal Relevance*) com $k=4$ e $\text{fetch\_k}=25$, evitando redundância de vídeos na mesma resposta.
-- **Gerenciamento de VRAM:** Descarregamento forçado de modelos do Ollama (`keep_alive: 0`), limpeza de cache PyTorch (`torch.cuda.empty_cache()`) e coleta de lixo Python (`gc.collect()`).
+- **Gerenciamento de memória:** descarregamento de modelos pelo Ollama (`keep_alive: 0`) e coleta de lixo Python.

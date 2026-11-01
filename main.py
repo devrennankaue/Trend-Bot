@@ -17,32 +17,11 @@ from src import (
     TrendDataIngestor,
     limpar_memoria_gpu,
     checar_conexao_ollama,
-    MODELOS_PADRAO,
     resolver_caminho_csv,
     resolver_caminho_db,
     DEFAULT_CHROMA_DIR,
     DEFAULT_CSV_PATH
 )
-
-
-def menu_selecao_modelo() -> str:
-    """Exibe o menu interativo inicial para escolha do modelo local."""
-    print(" Escolha o modelo local para esta sessão:")
-    print(" -------------------------------------------------------------")
-    for key, (nome, desc) in MODELOS_PADRAO.items():
-        marcador = " [PADRÃO]" if key == "1" else ""
-        print(f" [{key}] {nome:<10} - {desc}{marcador}")
-    print(" -------------------------------------------------------------")
-
-    escolha = input(" Digite o número da opção (Pressione Enter para [1] llama3): ").strip()
-    
-    if escolha in MODELOS_PADRAO:
-        modelo_selecionado = MODELOS_PADRAO[escolha][0]
-    else:
-        modelo_selecionado = "llama3"
-
-    print(f"\nModelo ativo selecionado: [{modelo_selecionado.upper()}]\n")
-    return modelo_selecionado
 
 
 def main():
@@ -53,7 +32,7 @@ def main():
     csv_path = resolver_caminho_csv()
     db_dir = resolver_caminho_db()
 
-    # 1. Ingestão Inteligente: indexa apenas se a base ChromaDB não existir
+    # 1. Ingestão: cria o índice JSON se ele ainda não existir
     if not os.path.exists(db_dir) or not os.listdir(db_dir):
         if not os.path.exists(csv_path):
             print(f"Arquivo de dados não encontrado em '{csv_path}'.")
@@ -71,25 +50,21 @@ def main():
     retriever_system = TrendRetriever(persist_directory=db_dir)
     retriever = retriever_system.get_retriever(k=4) 
 
-    # 3. Menu Interativo de Seleção do Modelo Inicial
-    modelo_inicial = menu_selecao_modelo()
-
-    # 4. Verificação de Conectividade com o Ollama
+    # 3. Verificação de Conectividade com o Ollama
     if not checar_conexao_ollama():
         print("⚠️  Aviso: O serviço do Ollama não está ativo em http://localhost:11434.")
         print("💡 Para iniciar o Ollama no Windows:")
         print("   - Abra o aplicativo 'Ollama' pelo Menu Iniciar, OU")
         print("   - Em um terminal, execute: ollama serve\n")
 
-    # 5. Inicia o Bot
-    bot = TrendBot(retriever=retriever, model_name=modelo_inicial, keep_alive="0")
+    # 4. Inicia o bot com o único modelo configurado
+    bot = TrendBot(retriever=retriever, keep_alive="0")
 
     # 6. Loop do Chat Interativo
     print("="*65)
     print(f" TrendBot-BR Online com [{bot.model_name.upper()}]!")
     print(" Comandos úteis:")
     print("   - 'sair', 'exit' ou 'quit' : Encerra a conversa")
-    print("   - '/modelo'                : Troca o modelo ativo durante o chat")
     print("="*65 + "\n")
     
     while True:
@@ -104,11 +79,6 @@ def main():
                 print("\nTrendBot-BR: Falou, valeu pelo papo! Nos vemos na FY.\n")
                 limpar_memoria_gpu(bot.model_name)
                 break
-
-            if user_input.lower() in ['/modelo', '/model', '/trocar']:
-                novo_modelo = menu_selecao_modelo()
-                bot.trocar_modelo(novo_modelo)
-                continue
 
             print(f"TrendBot-BR [{bot.model_name}] (Pesquisando as trends...)")
             response = bot.ask(user_input)

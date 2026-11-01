@@ -1,5 +1,2 @@
-langchain>=0.1.0
-langchain-community>=0.0.10
-chromadb>=0.4.22
-tiktoken>=0.5.1
-pandas>=2.0.0
+# O código Python usa apenas a biblioteca padrão.
+# Ollama é instalado separadamente para executar llama3 e nomic-embed-text.

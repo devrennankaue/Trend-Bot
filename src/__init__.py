@@ -1,10 +1,10 @@
 """
 TrendBot-BR: Assistente Inteligente de Tendências do TikTok no Brasil
-Arquitetura RAG com LangChain, ChromaDB e Modelos Locais via Ollama
+Arquitetura RAG com índice JSON e modelos locais via Ollama
 """
 
 from .config import (
-    MODELOS_PADRAO,
+    DEFAULT_MODEL,
     DEFAULT_EMBEDDING_MODEL,
     DEFAULT_OLLAMA_URL,
     DEFAULT_TEMPERATURE,
@@ -31,7 +31,7 @@ __all__ = [
     "limpar_memoria_gpu",
     "obter_metricas_memoria",
     "checar_conexao_ollama",
-    "MODELOS_PADRAO",
+    "DEFAULT_MODEL",
     "DEFAULT_EMBEDDING_MODEL",
     "DEFAULT_OLLAMA_URL",
     "DEFAULT_TEMPERATURE",

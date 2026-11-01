@@ -10,10 +10,10 @@ Documento mestre de contexto, arquitetura e governança técnica do **TrendBot-B
 
 ### Objetivos Centrais
 - **Inferência 100% Local**: Privacidade estrita de dados e custo zero por requisição utilizando LLMs executados via Ollama local.
-- **Calibração Semântica para Português (Brasil)**: Indexação semântica de alta precisão através do modelo de embeddings BERTimbau (`neuralmind/bert-base-portuguese-cased`).
+- **Embeddings Locais**: Vetorização de textos e consultas com `nomic-embed-text` via Ollama.
 - **Recuperação Diversificada e Não-Redundante**: Busca semântica com Relevância Marginal Máxima (MMR) para evitar a concentração de respostas em múltiplos trechos do mesmo vídeo.
-- **Gestão Proativa de Recursos de Hardware**: Monitoramento e liberação dinâmica de VRAM (NVIDIA GPU) e RAM entre trocas de modelos e execuções de benchmarks.
-- **Avaliação Técnica e Benchmarking**: Suite integrada para medição de latência, consumo de memória, estabilidade e fidelidade das respostas entre múltiplos LLMs.
+- **Gestão de Recursos**: Liberação do modelo pelo Ollama e medição de RAM/VRAM no benchmark.
+- **Avaliação Técnica**: Benchmark de latência, consumo de memória e sucesso de execução do `llama3`.
 
 ---
 
@@ -22,13 +22,13 @@ Documento mestre de contexto, arquitetura e governança técnica do **TrendBot-B
 | Camada | Tecnologia / Padrão | Justificativa Técnica |
 | :--- | :--- | :--- |
 | **Linguagem** | Python 3.10+ | Ecossistema padrão de IA/ML e processamento de dados. |
-| **Orquestração RAG** | LangChain / LCEL (*LangChain Expression Language*) | Chains declarativas, streaming, composição modular e desacoplamento de componentes. |
-| **Modelos de Linguagem (LLM)** | Ollama (`llama3`, `mistral`, `gemma:7b`) | Execução local, troca dinâmica no runtime e controle de ciclo de vida (`keep_alive: 0`). |
-| **Embeddings** | HuggingFace / BERTimbau (`neuralmind/bert-base-portuguese-cased`) | Embeddings de 768 dimensões com calibração semântica superior para o vocabulário e sintaxe do Português Brasileiro. |
-| **Banco Vetorial** | ChromaDB (persistência local em disco) | Base vetorial serverless, leve, integrada ao LangChain e sem dependência de serviços em nuvem. |
+| **Orquestração RAG** | Python padrão | Pipeline direto de recuperação e geração, sem framework de orquestração. |
+| **Modelo de linguagem (LLM)** | Ollama (`llama3`) | Execução local de um único modelo de geração. |
+| **Embeddings** | Ollama (`nomic-embed-text`) | Vetores gerados localmente para textos e consultas. |
+| **Índice** | JSON local | Armazena textos, metadados e embeddings sem ChromaDB. |
 | **Estratégia de Busca** | MMR (*Maximal Marginal Relevance*) | Balanceia similaridade semântica ($k=4$) com diversidade de conteúdo ($\text{fetch\_k}=25$). |
-| **Processamento de Dados** | Pandas + `RecursiveCharacterTextSplitter` | ETL resiliente com chunking de 500 caracteres e overlap de 50 caracteres. |
-| **Gestão de Hardware** | `nvidia-smi` + PyTorch CUDA API + `/proc/meminfo` / Win32 API | Telemetria contínua de VRAM/RAM e descarregamento forçado de modelos para prevenir OOM (*Out Of Memory*). |
+| **Processamento de Dados** | `csv` e Python padrão | Ingestão e divisão de textos em blocos de 500 caracteres com sobreposição de 50. |
+| **Gestão de Hardware** | `nvidia-smi` + `/proc/meminfo` / Win32 API | Leitura de RAM/VRAM no benchmark e descarregamento pelo Ollama. |
 
 ---
 
@@ -36,11 +36,11 @@ Documento mestre de contexto, arquitetura e governança técnica do **TrendBot-B
 
 Decisões de nível de projeto registradas em [`.specs/STATE.md`](file:///home/renan/LSI/Trend-Bot/.specs/STATE.md):
 
-- **AD-001 (LLMs Locais via Ollama)**: Uso exclusivo de LLMs locais com `keep_alive: 0` para garantir privacidade e liberação imediata de VRAM.
-- **AD-002 (BERTimbau + ChromaDB)**: Embeddings especializados em PT-BR persistidos em disco local sem dependência de nuvem.
+- **AD-001 (Llama 3 local via Ollama)**: Uso de `llama3` para geração local com `keep_alive: 0`.
+- **AD-002 (Ollama embeddings + JSON)**: Embeddings gerados localmente e persistidos em índice JSON.
 - **AD-003 (Recuperação MMR com k=4 e fetch_k=25)**: Eliminação de chunks redundantes do mesmo vídeo no prompt do modelo.
 - **AD-004 (Pipeline de Ingestão Resiliente)**: Normalização automática de esquemas de CSV de TikTok com metadados estruturados (`video_id`, `hashtags`, `upload_date`, `play_count`).
-- **AD-005 (Gestão Ativa de VRAM/RAM)**: Coleta de métricas de hardware e rotinas de descarte de tensores/processos na GPU em trocas de modelo e benchmarks.
+- **AD-005 (Gestão de VRAM/RAM)**: Coleta de métricas de hardware no benchmark e descarregamento do modelo pelo Ollama.
 
 ---
 
@@ -65,7 +65,7 @@ Trend-Bot/
 │
 ├── data/                             # Armazenamento de dados
 │   ├── raw/                          # CSVs de postagens brutas (ex: postagens_tiktok.csv)
-│   ├── chroma_db/                    # Diretório persistido do banco vetorial ChromaDB
+│   ├── chroma_ollama_db/             # Índice JSON local com textos e embeddings
 │   └── perguntas.txt                 # Lista de perguntas temáticas para testes manuais
 │
 ├── docs/                             # Documentação técnica e relatórios
@@ -76,13 +76,13 @@ Trend-Bot/
 │
 ├── src/                              # Código-fonte modularizado
 │   ├── __init__.py                   # Exportação do pacote
-│   ├── bot.py                        # Orquestrador TrendBot (LCEL + histórico + prompt)
+│   ├── bot.py                        # Orquestrador TrendBot (histórico + prompt)
 │   ├── config.py                     # Constantes globais, caminhos, templates e fallbacks
-│   ├── ingestor.py                   # Ingestão de CSV, chunking e indexação no ChromaDB
+│   ├── ingestor.py                   # Ingestão de CSV, chunking e criação do índice JSON
 │   ├── memory.py                     # Telemetria e limpeza de VRAM (NVIDIA) e RAM
-│   └── retriever.py                  # Conexão com ChromaDB e busca semântica MMR
+│   └── retriever.py                  # Busca semântica MMR no índice JSON
 │
-├── main.py                           # CLI interativa principal com menu e troca de modelo
+├── main.py                           # CLI interativa principal
 ├── tests/                            # Testes unitários e de integração
 ├── requirements.txt                  # Dependências do projeto
 ├── README.md                         # Documentação pública de apresentação

@@ -20,6 +20,7 @@ if sys.platform == "win32":
 
 from src.config import (
     resolver_caminho_db,
+    DEFAULT_MODEL,
     DEFAULT_EMBEDDING_MODEL,
     DEFAULT_OLLAMA_URL,
     DEFAULT_KEEP_ALIVE
@@ -60,7 +61,7 @@ def formatar_cabecalho_markdown(metadados: Dict[str, Any]) -> str:
     
     ollama_url = metadados.get("ollama_url", DEFAULT_OLLAMA_URL)
     embedding = metadados.get("modelo_embedding", DEFAULT_EMBEDDING_MODEL)
-    caminho_db = metadados.get("caminho_db", "data/chroma_db")
+    caminho_db = metadados.get("caminho_db", "data/chroma_ollama_db")
     k = metadados.get("k_retrieval", 4)
     fetch_k = metadados.get("fetch_k", 25)
     keep_alive = metadados.get("keep_alive", DEFAULT_KEEP_ALIVE)
@@ -71,7 +72,7 @@ def formatar_cabecalho_markdown(metadados: Dict[str, Any]) -> str:
         f"**Data da Execução:** {data_inicio}  ",
         f"**Duração Total:** {duracao}s  ",
         f"**Ambiente:** SO: {so} | GPU: {gpu} | RAM Total: {ram_str}  ",
-        f"**Configurações RAG:** ChromaDB (MMR, k={k}, fetch_k={fetch_k}) | Embeddings: `{embedding}` | Ollama: `{ollama_url}` (`keep_alive: {keep_alive}`)  ",
+        f"**Configurações RAG:** índice JSON (MMR, k={k}, fetch_k={fetch_k}) | Embeddings: `{embedding}` | Ollama: `{ollama_url}` (`keep_alive: {keep_alive}`)  ",
         f"**Modelos Avaliados:** {modelos_str}  ",
         f"**Base Vetorial:** `{caminho_db}`",
         "\n---"
@@ -266,7 +267,6 @@ def exportar_para_markdown(
 
 
 def executar_benchmark_tecnico(
-    modelos: List[str],
     caminho_db: Optional[str] = None,
     k_retrieval: int = 4
 ):
@@ -275,6 +275,7 @@ def executar_benchmark_tecnico(
     consumo de memória RAM e VRAM nos modelos locais, com gestão de VRAM da GPU.
     Gera exportações em CSV e relatórios estruturados individuais em Markdown (.md).
     """
+    modelos = [DEFAULT_MODEL]
     inicio_benchmark = time.time()
     data_inicio = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -317,7 +318,7 @@ def executar_benchmark_tecnico(
         # 1. Limpeza de VRAM preventiva na GPU
         limpar_memoria_gpu()
         
-        bot = TrendBot(retriever=retriever, model_name=modelo, keep_alive="0")
+        bot = TrendBot(retriever=retriever, keep_alive="0")
         tempos = []
         palavras = []
         rams = []
@@ -436,11 +437,8 @@ if __name__ == "__main__":
     print("\n" + "="*65)
     print("          PAINEL DE BENCHMARK TÉCNICO - TRENDBOT-BR          ")
     print("="*65 + "\n")
-    print("Iniciando avaliação comparativa completa em todos os modelos:")
-    print("  • Meta LLaMA 3 (8B)")
-    print("  • Mistral (7B)")
-    print("  • Gemma (7B)")
+    print("Iniciando benchmark do único modelo configurado:")
+    print(f"  • LLaMA 3 ({DEFAULT_MODEL})")
     print("-------------------------------------------------------------")
 
-    modelos_alvo = ["llama3", "mistral", "gemma:7b"]
-    executar_benchmark_tecnico(modelos=modelos_alvo)
+    executar_benchmark_tecnico()
