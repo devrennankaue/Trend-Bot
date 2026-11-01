@@ -1,154 +1,89 @@
-import warnings
-from typing import Optional
+"""Indexação do corpus usando Python padrão e Ollama."""
+import csv
+import json
+import os
+from typing import Dict, List, Optional
 
-try:
-    import torch
-except ImportError:
-    torch = None
-import pandas as pd
-
-# Supressão de avisos de depreciação para saída limpa no terminal
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-warnings.filterwarnings("ignore", category=UserWarning)
-
-# Imports modernos do ecossistema LangChain com fallback resiliente
-try:
-    from langchain_huggingface import HuggingFaceEmbeddings
-except ImportError:
-    from langchain_community.embeddings import HuggingFaceEmbeddings
-
-try:
-    from langchain_chroma import Chroma
-except ImportError:
-    from langchain_community.vectorstores import Chroma
-
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_core.documents import Document
-
-from .config import (
-    DEFAULT_EMBEDDING_MODEL,
-    DEFAULT_CHUNK_SIZE,
-    DEFAULT_CHUNK_OVERLAP,
-    resolver_caminho_csv,
-    resolver_caminho_db
-)
+from .config import (DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE, DEFAULT_EMBEDDING_BATCH_SIZE,
+                     DEFAULT_EMBEDDING_MODEL, DEFAULT_OLLAMA_URL, resolver_caminho_csv,
+                     resolver_caminho_db)
+from .ollama_embeddings import OllamaEmbeddings
 
 
 class TrendDataIngestor:
-    """
-    Responsável exclusivo por carregar os dados brutos (CSV), realizar chunking,
-    tratar metadados e persistir os embeddings no banco vetorial ChromaDB.
-    """
-    def __init__(
-        self, 
-        csv_path: Optional[str] = None, 
-        persist_directory: Optional[str] = None, 
-        nrows: Optional[int] = 100
-    ):
+    """Lê o CSV, gera embeddings no Ollama e salva um índice JSON local."""
+    def __init__(self, csv_path: Optional[str] = None, persist_directory: Optional[str] = None,
+                 nrows: Optional[int] = 100):
         self.csv_path = resolver_caminho_csv(csv_path)
         self.persist_directory = resolver_caminho_db(persist_directory)
         self.nrows = nrows
-        
-        self.device_type = 'cuda' if torch is not None and torch.cuda.is_available() else 'cpu'
-        
-        self.embeddings = HuggingFaceEmbeddings(
-            model_name=DEFAULT_EMBEDDING_MODEL,
-            model_kwargs={'device': self.device_type}, 
-            encode_kwargs={'normalize_embeddings': False}
-        )
-        
-        self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=DEFAULT_CHUNK_SIZE,
-            chunk_overlap=DEFAULT_CHUNK_OVERLAP
-        )
-        
-    def load_and_index(self):
-        print(f"[Ingestor] Hardware detectado para processamento: {self.device_type.upper()}")
-        print(f"[Ingestor] Carregando os dados do CSV: {self.csv_path} (amostra: {self.nrows or 'tudo'})...")
-        
-        try:
-            df = pd.read_csv(self.csv_path, encoding='utf-8', nrows=self.nrows) 
-        except UnicodeDecodeError:
-            df = pd.read_csv(self.csv_path, encoding='latin1', nrows=self.nrows) 
-            
-        df = df.fillna('')
-            
-        docs = []
-        colunas_texto = [
-            'transcricaoVideo', 'transcription', 
-            'descricaoVideo', 'descricao', 
-            'resumo', 'textoVideo', 'texto', 
-            'postagem', 'text', 'content'
-        ]
+        self.embeddings = OllamaEmbeddings(DEFAULT_EMBEDDING_MODEL, DEFAULT_OLLAMA_URL)
 
-        for index, row in df.iterrows():
-            partes_conteudo = []
+    @staticmethod
+    def _value(row: Dict[str, str], *fields: str, default: str = "") -> str:
+        for field in fields:
+            value = str(row.get(field, "")).strip()
+            if value and value.upper() != "NULL" and value.lower() != "nan":
+                return value
+        return default
 
-            for col in colunas_texto:
-                val = str(row.get(col, '')).strip()
-                if val and val.upper() != "NULL" and val.lower() != "nan":
-                    partes_conteudo.append(f"Conteúdo: {val}")
-                    break
-                    
-            musica = str(row.get('nomeMusica', '')).strip()
-            autor_musica = str(row.get('autorMusica', '')).strip()
-            if musica and musica.upper() != "NULL" and musica.lower() != "nan":
-                info_musica = f"Música: {musica}"
-                if autor_musica and autor_musica.upper() != "NULL" and autor_musica.lower() != "nan":
-                    info_musica += f" ({autor_musica})"
-                partes_conteudo.append(info_musica)
+    @staticmethod
+    def _split(text: str) -> List[str]:
+        if len(text) <= DEFAULT_CHUNK_SIZE:
+            return [text]
+        step = DEFAULT_CHUNK_SIZE - DEFAULT_CHUNK_OVERLAP
+        return [text[index:index + DEFAULT_CHUNK_SIZE] for index in range(0, len(text), step)]
 
-            topico = str(row.get('topico_principal', '')).strip()
-            if topico and topico.upper() != "NULL" and topico.lower() != "nan":
-                partes_conteudo.append(f"Tópico: {topico}")
-
-            hashtags = str(row.get('hashtags_postagem', row.get('hashtags_topico_principal', row.get('hashtags', '')))).strip()
-            if hashtags and hashtags.upper() != "NULL" and hashtags.lower() != "nan":
-                partes_conteudo.append(f"Hashtags: {hashtags}")
-
-            if partes_conteudo:
-                text_content = "\n".join(partes_conteudo)
-            else: 
-                text_content = " ".join([str(val) for val in row.values if str(val).strip() and str(val).strip() != "NULL"])
-
-            video_id = str(row.get('IDPostagem', row.get('IDPostagemFonte', row.get('video_id', f'video_{index}'))))
-            upload_date = str(row.get('dataPublicacao', row.get('upload_date', row.get('data', 'N/A'))))
-            
-            raw_plays = row.get('plays_da_ultima_coleta', row.get('plays_mais_recente', row.get('play_count', 0)))
+    def _rows(self) -> List[Dict[str, str]]:
+        for encoding in ("utf-8", "latin1"):
             try:
-                play_count = int(raw_plays)
-            except (ValueError, TypeError):
-                try:
-                    play_count = int(float(raw_plays))
-                except (ValueError, TypeError):
-                    play_count = 0
-            
-            doc = Document(
-                page_content=text_content,
-                metadata={
-                    "video_id": str(video_id),
-                    "hashtags": str(hashtags), 
-                    "upload_date": str(upload_date),
-                    "play_count": play_count
-                }
-            )
-            docs.append(doc)
-            
-        print("[Ingestor] Realizando chunking dos documentos...")
-        splits = self.text_splitter.split_documents(docs)
-        
-        print(f"[Ingestor] Salvando no ChromaDB em '{self.persist_directory}' (usando {self.device_type.upper()})...")
-        vectorstore = Chroma.from_documents(
-            documents=splits, 
-            embedding=self.embeddings, 
-            persist_directory=self.persist_directory
-        )
-        
-        if hasattr(vectorstore, "persist") and callable(getattr(vectorstore, "persist")):
-            try:
-                vectorstore.persist()
-            except Exception:
+                with open(self.csv_path, encoding=encoding, newline="") as csv_file:
+                    rows = list(csv.DictReader(csv_file))
+                return rows[:self.nrows] if self.nrows else rows
+            except UnicodeDecodeError:
                 pass
+        return []
 
-        print("[Ingestor] Indexação concluída com sucesso!")
-        return vectorstore
+    def load_and_index(self):
+        print("[Ingestor] Gerando embeddings localmente pelo Ollama...")
+        documents = []
+        for index, row in enumerate(self._rows()):
+            content = self._value(row, "transcricaoVideo", "transcription", "descricaoVideo", "descricao",
+                                  "resumo", "textoVideo", "texto", "postagem", "text", "content")
+            music = self._value(row, "nomeMusica")
+            author = self._value(row, "autorMusica")
+            topic = self._value(row, "topico_principal")
+            hashtags = self._value(row, "hashtags_postagem", "hashtags_topico_principal", "hashtags")
+            parts = []
+            if content:
+                parts.append(f"Conteúdo: {content}")
+            if music:
+                parts.append(f"Música: {music}" + (f" ({author})" if author else ""))
+            if topic:
+                parts.append(f"Tópico: {topic}")
+            if hashtags:
+                parts.append(f"Hashtags: {hashtags}")
+            text = "\n".join(parts) or " ".join(str(value) for value in row.values() if str(value).strip())
+            if not text.strip():
+                continue
+            metadata = {
+                "video_id": self._value(row, "IDPostagem", "IDPostagemFonte", "video_id", default=f"video_{index}"),
+                "hashtags": hashtags,
+                "upload_date": self._value(row, "dataPublicacao", "upload_date", "data", default="N/A"),
+                "play_count": self._value(row, "plays_da_ultima_coleta", "plays_mais_recente", "play_count", default="0"),
+            }
+            documents.extend({"page_content": chunk, "metadata": metadata} for chunk in self._split(text))
+        if not documents:
+            raise RuntimeError("O CSV não contém registros textuais válidos para indexação.")
+        vectors = []
+        texts = [doc["page_content"] for doc in documents]
+        for start in range(0, len(texts), DEFAULT_EMBEDDING_BATCH_SIZE):
+            vectors.extend(self.embeddings.embed_documents(texts[start:start + DEFAULT_EMBEDDING_BATCH_SIZE]))
+        for document, vector in zip(documents, vectors):
+            document["embedding"] = vector
+        os.makedirs(self.persist_directory, exist_ok=True)
+        index_path = os.path.join(self.persist_directory, "indice_ollama.json")
+        with open(index_path, "w", encoding="utf-8") as index_file:
+            json.dump(documents, index_file, ensure_ascii=False)
+        print(f"[Ingestor] Indexação concluída em '{index_path}'.")
+        return documents
