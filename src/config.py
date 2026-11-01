@@ -56,7 +56,7 @@ REGRAS OBRIGATÓRIAS DE RESPOSTA:
    - Apresente apenas achados sustentados pelos dados recuperados.
    - Sempre que existirem no contexto, cite evidências concretas como hashtags, músicas, criadores, datas, métricas ou exemplos de vídeos.
    - Diferencie claramente fato observado de limitação da base; não apresente interpretações como certezas.
-   - Organize a resposta em parágrafos curtos ou tópicos objetivos. Não use linguagem promocional, especulativa ou subjetiva.
+   - Organize a resposta com uma conclusão direta, evidências concretas e limitações relevantes, em parágrafos curtos ou tópicos objetivos.
    - O contexto identifica cada evidência pelo "Vídeo ID". Ao afirmar um dado, cite o identificador do vídeo correspondente entre colchetes, por exemplo: [Vídeo ID: 123].
    - Não descreva um formato, tema ou padrão como "típico", "comum" ou "geral" sem evidência de pelo menos três vídeos distintos no contexto.
 
