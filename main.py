@@ -18,9 +18,7 @@ from src import (
     limpar_memoria_gpu,
     checar_conexao_ollama,
     resolver_caminho_csv,
-    resolver_caminho_db,
-    DEFAULT_CHROMA_DIR,
-    DEFAULT_CSV_PATH
+    resolver_caminho_db
 )
 
 
@@ -29,20 +27,20 @@ def main():
     print("       TRENDBOT-BR - ASSISTENTE INTELIGENTE DO TIKTOK        ")
     print("="*65 + "\n")
     
-    csv_path = resolver_caminho_csv()
+    csv_path = str(DIRETORIO_RAIZ / "data" / "corpus_pesquisa_5000.csv")
     db_dir = resolver_caminho_db()
 
-    # 1. Ingestão: cria o índice JSON se ele ainda não existir
-    if not os.path.exists(db_dir) or not os.listdir(db_dir):
+    # 1. Indexa apenas o corpus selecionado e auditado.
+    index_path = os.path.join(db_dir, "indice_ollama.sqlite")
+    if not os.path.exists(index_path) or not TrendRetriever.index_complete(db_dir):
         if not os.path.exists(csv_path):
-            print(f"Arquivo de dados não encontrado em '{csv_path}'.")
-            print("Dica: Adicione 'postagens_tiktok.csv' na pasta 'data/raw/' ou na raiz.")
+            print(f"Corpus selecionado não encontrado em '{csv_path}'.")
+            print("Execute scripts/preparar_corpus.ps1 antes de iniciar o TrendBot.")
             sys.exit(1)
 
         print(f"[Setup] Criando base vetorial a partir de '{csv_path}'...")
-        ingestor = TrendDataIngestor(csv_path=csv_path, persist_directory=DEFAULT_CHROMA_DIR, nrows=100)
+        ingestor = TrendDataIngestor(csv_path=csv_path, persist_directory=db_dir, nrows=None)
         ingestor.load_and_index()
-        db_dir = DEFAULT_CHROMA_DIR
     else:
         print(f"[Setup] Banco vetorial detectado em '{db_dir}'. Inicializando...")
 

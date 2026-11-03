@@ -2,6 +2,8 @@
 import csv
 import json
 import os
+import sqlite3
+from contextlib import closing
 import sys
 import tempfile
 import unittest
@@ -24,6 +26,13 @@ class _EmbeddingsFake:
         return [[float(index)] for index in range(len(texts))]
 
 
+class _FalhaNoSegundoLote(_EmbeddingsFake):
+    def embed_documents(self, texts):
+        if self.batch_sizes:
+            raise RuntimeError("interrompido")
+        return super().embed_documents(texts)
+
+
 class TestIngestorBatching(unittest.TestCase):
     def test_indexa_todos_os_chunks_em_lotes_limitados(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -42,8 +51,31 @@ class TestIngestorBatching(unittest.TestCase):
 
             self.assertEqual(len(documents), 11)
             self.assertEqual(embeddings.batch_sizes, [DEFAULT_EMBEDDING_BATCH_SIZE, 1])
-            with open(os.path.join(index_dir, "indice_ollama.json"), encoding="utf-8") as index_file:
-                self.assertEqual(len(json.load(index_file)), 11)
+            with closing(sqlite3.connect(os.path.join(index_dir, "indice_ollama.sqlite"))) as connection:
+                self.assertEqual(connection.execute("SELECT COUNT(*) FROM documents").fetchone()[0], 11)
+                self.assertEqual(connection.execute("SELECT value FROM corpus WHERE key = 'complete'").fetchone()[0], "1")
+
+            second_embeddings = _EmbeddingsFake()
+            ingestor.embeddings = second_embeddings
+            ingestor.load_and_index()
+            self.assertEqual(second_embeddings.batch_sizes, [])
+
+    def test_retoma_apos_interrupcao(self):
+        with tempfile.TemporaryDirectory() as directory:
+            csv_path = os.path.join(directory, "videos.csv")
+            index_dir = os.path.join(directory, "index")
+            with open(csv_path, "w", encoding="utf-8", newline="") as csv_file:
+                writer = csv.DictWriter(csv_file, fieldnames=["descricaoVideo"])
+                writer.writeheader()
+                writer.writerows({"descricaoVideo": f"video {index}"} for index in range(11))
+            ingestor = TrendDataIngestor(csv_path=csv_path, persist_directory=index_dir, nrows=None)
+            ingestor.embeddings = _FalhaNoSegundoLote()
+            with self.assertRaisesRegex(RuntimeError, "interrompido"):
+                ingestor.load_and_index()
+            resumed = _EmbeddingsFake()
+            ingestor.embeddings = resumed
+            ingestor.load_and_index()
+            self.assertEqual(resumed.batch_sizes, [1])
 
 
 if __name__ == "__main__":
