@@ -27,4 +27,4 @@ env/
 # Relatórios e logs de benchmark gerados
 benchmark/reports/
 benchmark/*.csv
-resultados_benchmark.csv
+resultados_benchmark.csvdata/chroma_ollama_db/indice_ollama.sqlite
