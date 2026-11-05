@@ -1,15 +1,26 @@
 """Consultas calculadas sobre todo o corpus de pesquisa selecionado."""
 import csv
+import json
 import re
 import unicodedata
+import urllib.request
 from collections import Counter
 from typing import Optional
 
-from .genre_analysis import compare_engagement
+from .config import DEFAULT_MODEL, DEFAULT_OLLAMA_URL
+from .genre_analysis import classify_genres, compare_engagement
 
 
 class CorpusMetrics:
     HUMOR_TERMS = re.compile(r"\b(humor\w*|comed\w*|comic\w*|piad\w*|engrac\w*)\b")
+    TOPIC_ALIASES = {
+        "beleza": "Beleza e moda",
+        "esportes": "Esportes",
+        "culinaria": "Culinária",
+        "games": "Games",
+        "saude": "Saúde",
+        "animais": "Animais",
+    }
 
     def __init__(self, csv_path: str):
         self.csv_path = csv_path
@@ -154,6 +165,146 @@ class CorpusMetrics:
                 "Exemplos entre os mais vistos:\n" + "\n".join(lines) +
                 "\nA busca cobre postagens e descrições dos vídeos; não resume opiniões dos comentários.")
 
+    @staticmethod
+    def _associated_topic(normalized):
+        if not (re.search(r"\b(?:que|quais)\s+(?:assuntos|temas|topicos|categorias)\b", normalized)
+                and re.search(r"\b(?:junto|associ\w*|relacion\w*|acompanh\w*|combin\w*)\b", normalized)):
+            return None
+        match = re.search(r"\b(?:conteudo|videos?|postagens?)\s+(?:de|sobre)\s+(.+?)\s*\??$", normalized)
+        if not match:
+            match = re.search(r"\b(?:junto|associ\w*|relacion\w*|combin\w*)\s+"
+                              r"(?:com|a|ao|aos|as)\s+(.+?)\s*\??$", normalized)
+        if not match:
+            return None
+        topic = re.sub(r"^(?:conteudo|videos?|postagens?)\s+(?:de|sobre)\s+", "", match.group(1))
+        topic = topic.strip(" ?.!")
+        return topic if 3 <= len(topic) <= 40 and len(topic.split()) <= 4 else None
+
+    def _associated_topic_answer(self, topic):
+        """Conta categorias associadas em vídeos distintos do CSV, sem depender do top-k do RAG."""
+        target_group = self.TOPIC_ALIASES.get(topic)
+        subject_groups = set(classify_genres({"resumo": topic}))
+        if target_group:
+            subject_groups.add(target_group)
+        grouped = {}
+        target_ids = set()
+        with open(self.csv_path, encoding="utf-8-sig", newline="") as csv_file:
+            for row in csv.DictReader(csv_file):
+                video_id = self._value(row, "IDPostagemFonte")
+                if not video_id or video_id in target_ids:
+                    continue
+                groups = classify_genres(row)
+                if target_group:
+                    if target_group not in groups:
+                        continue
+                else:
+                    evidence = " ".join(self._value(row, field) for field in
+                                        ("assuntos_llm", "postagem", "resumo", "descricaoVideo"))
+                    if not re.search(r"(?<!\w)" + re.escape(topic) + r"(?!\w)",
+                                     self._normalize(evidence)):
+                        continue
+                target_ids.add(video_id)
+                for group in groups:
+                    if group not in subject_groups:
+                        grouped.setdefault(group, []).append(row)
+
+        if not target_ids:
+            return f"Não encontrei vídeos classificados ou mencionando '{topic}' no corpus selecionado."
+        leaders = sorted(grouped.items(), key=lambda item: (-len(item[1]), item[0]))[:5]
+        if not leaders:
+            return (f"Encontrei {len(target_ids)} vídeos relacionados a '{topic}', mas nenhum recebeu "
+                    "uma segunda categoria pelas regras atuais de classificação.")
+        lines = []
+        for group, rows in leaders:
+            exemplar = max(rows, key=lambda row: self._number(row, ("plays_mais_recente",)) or 0)
+            video_id = self._value(exemplar, "IDPostagemFonte")
+            lines.append(f"- {group}: {len(rows)} vídeo(s), por exemplo [Vídeo ID: {video_id}].")
+        return (f"Nos {len(target_ids)} vídeos relacionados a '{topic}' no corpus selecionado, "
+                "estas categorias também foram identificadas:\n" + "\n".join(lines) +
+                "\nA contagem é por vídeo e as categorias podem se sobrepor. "
+                "A classificação usa termos de assuntos, postagens e resumos; ela é exploratória "
+                "e não confirma que os temas sejam centrais em cada vídeo.")
+
+    @staticmethod
+    def _people_topic(normalized):
+        if not re.search(r"\bquem\b.*\b(costuma\w*|aparece\w*|mais)\b", normalized):
+            return None
+        match = re.search(r"\b(?:sobre|de|do|da)\s+([\w\s]+?)\s*\??$", normalized)
+        if not match:
+            return None
+        topic = match.group(1).strip()
+        return topic if 3 <= len(topic) <= 50 and len(topic.split()) <= 5 else None
+
+    def _people_topic_answer(self, topic):
+        fields = ("postagem", "resumo", "descricaoVideo", "transcricaoVideo")
+        with open(self.csv_path, encoding="utf-8-sig", newline="") as csv_file:
+            matches = [row for row in csv.DictReader(csv_file) if any(
+                topic in self._normalize(self._value(row, field)) for field in fields
+            )]
+        described = [(self._value(row, "IDPostagemFonte"), self._value(row, "descricaoVideo"))
+                     for row in matches if self._value(row, "IDPostagemFonte")
+                     and self._value(row, "descricaoVideo")]
+        if not matches:
+            return f"Não encontrei vídeos com menção a '{topic}' no corpus selecionado."
+        if not described:
+            return (f"Encontrei {len(matches)} vídeos sobre '{topic}', mas nenhum tem descrição visual "
+                    "com a qual identificar quem aparece.")
+
+        counts = Counter()
+        sources = {}
+        try:
+            for start in range(0, len(described), 6):
+                batch = described[start:start + 6]
+                prompt = (
+                    "Extraia nomes de pessoas que a descrição visual afirma aparecer no vídeo. "
+                    "Não inclua lugares, equipes, programas, obras ou pessoas apenas mencionadas como assunto. "
+                    "Não infira identidades. Responda somente JSON no formato "
+                    "{\"videos\":[{\"id\":\"...\",\"names\":[\"Nome exato\"]}]}. "
+                    "Use uma lista vazia quando a descrição não identificar ninguém.\nDados:\n"
+                    + json.dumps([{"id": video_id, "description": description}
+                                  for video_id, description in batch], ensure_ascii=False)
+                )
+                payload = json.dumps({"model": DEFAULT_MODEL, "prompt": prompt, "stream": False,
+                                      "format": "json", "options": {"temperature": 0}}).encode("utf-8")
+                request = urllib.request.Request(f"{DEFAULT_OLLAMA_URL}/api/generate", data=payload,
+                                                 headers={"Content-Type": "application/json"}, method="POST")
+                with urllib.request.urlopen(request, timeout=300) as response:
+                    result = json.loads(response.read().decode("utf-8"))
+                extracted = json.loads(result.get("response", "{}"))
+                descriptions = dict(batch)
+                for item in extracted.get("videos", []):
+                    video_id = str(item.get("id", ""))
+                    description = descriptions.get(video_id)
+                    if not description:
+                        continue
+                    for name in item.get("names", []):
+                        if not isinstance(name, str) or len(name) < 3:
+                            continue
+                        if not re.search(r"(?<!\w)" + re.escape(name) + r"(?!\w)", description, re.IGNORECASE):
+                            continue
+                        key = self._normalize(name.strip())
+                        sources.setdefault(key, {"name": name.strip(), "ids": set()})["ids"].add(video_id)
+            for key, value in sources.items():
+                counts[key] = len(value["ids"])
+        except (OSError, ValueError, TypeError, KeyError):
+            return "Não foi possível conferir os nomes nas descrições visuais. Verifique o Ollama e tente novamente."
+
+        if not counts:
+            return (f"Analisei as descrições visuais de {len(described)} dos {len(matches)} vídeos "
+                    f"que mencionam '{topic}', mas não encontrei nomes de pessoas identificadas nelas.")
+        leaders = counts.most_common(5)
+        lines = []
+        for key, count in leaders:
+            ids = sorted(sources[key]["ids"])
+            examples = ", ".join(f"[Vídeo ID: {video_id}]" for video_id in ids[:3])
+            lines.append(f"- {sources[key]['name']}: {count} vídeo(s). Fontes: {examples}.")
+        conclusion = ("Nenhum nome se repete nos vídeos analisados. " if leaders[0][1] == 1 else "")
+        return (f"{conclusion}Nomes identificados nas descrições visuais de {len(described)} "
+                f"dos {len(matches)} vídeos que mencionam '{topic}' no corpus selecionado:\n"
+                + "\n".join(lines) +
+                "\nA contagem é por vídeo, não por repetição do nome no texto. "
+                "Ela depende da qualidade das descrições e não confirma identidade por imagem.")
+
     def _genre_engagement_answer(self):
         with open(self.csv_path, encoding="utf-8-sig", newline="") as csv_file:
             analysis = compare_engagement(list(csv.DictReader(csv_file)))
@@ -188,6 +339,12 @@ class CorpusMetrics:
 
     def answer(self, question: str) -> Optional[str]:
         normalized = self._normalize(question)
+        associated_topic = self._associated_topic(normalized)
+        if associated_topic:
+            return self._associated_topic_answer(associated_topic)
+        people_topic = self._people_topic(normalized)
+        if people_topic:
+            return self._people_topic_answer(people_topic)
         type_question = bool(re.search(
             r"\b(tipo|tipos|categoria|categorias|formato|formatos|conteudo|conteudos|"
             r"tema|temas|estilo|estilos|genero|generos|assunto|assuntos)\b", normalized,

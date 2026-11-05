@@ -17,7 +17,8 @@ from .ollama_embeddings import OllamaEmbeddings
 class TrendRetriever:
     QUERY_STOPWORDS = {"qual", "quais", "quanto", "quantos", "quantas", "como", "onde",
                        "quem", "video", "videos", "sobre", "para", "pela", "pelo",
-                       "estao", "esse", "essa", "esses", "essas", "diante", "entre"}
+                       "estao", "esse", "essa", "esses", "essas", "diante", "entre",
+                       "criadores", "brasileiros", "brasileiras", "reagem", "noticias"}
 
     def __init__(self, persist_directory: Optional[str] = None, embeddings: Optional[Any] = None):
         self.persist_directory = resolver_caminho_db(persist_directory)
@@ -124,7 +125,7 @@ class TrendRetriever:
                           if filter_text in doc["metadata"].get("hashtags", "").lower())
 
         ranked = heapq.nlargest(
-            DEFAULT_FETCH_K,
+            max(DEFAULT_FETCH_K, self.k * 8),
             ((doc, self._similarity(query_vector, doc["embedding"])) for doc in candidates),
             key=lambda item: item[1],
         )
@@ -152,11 +153,12 @@ class TrendRetriever:
             ranked = [item for item in ranked if item[0] is not chosen]
 
         terms = self._query_terms(question)
-        lexical = self.find_examples(terms, limit=min(self.k, 3))
+        lexical = self.find_examples(terms, limit=min(self.k, 4))
         direct = [doc for doc in lexical
-                  if sum(term in self._normalize(doc["page_content"]) for term in terms) >= 2]
+                  if sum(term in self._normalize(doc["page_content"]) for term in terms)
+                  >= (1 if len(terms) == 1 else 2)]
         if direct:
-            direct_ids = {doc["metadata"].get("video_id") for doc in direct[:2]}
-            selected = direct[:2] + [doc for doc in selected
+            direct_ids = {doc["metadata"].get("video_id") for doc in direct[:3]}
+            selected = direct[:3] + [doc for doc in selected
                                      if doc["metadata"].get("video_id") not in direct_ids]
         return selected[:self.k]

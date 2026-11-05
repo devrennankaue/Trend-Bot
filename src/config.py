@@ -18,7 +18,7 @@ DEFAULT_EMBEDDING_MODEL = "nomic-embed-text"
 DEFAULT_EMBEDDING_BATCH_SIZE = 10
 DEFAULT_CHUNK_SIZE = 500
 DEFAULT_CHUNK_OVERLAP = 50
-DEFAULT_RETRIEVAL_K = 4
+DEFAULT_RETRIEVAL_K = 8
 DEFAULT_FETCH_K = 25
 DEFAULT_MMR_LAMBDA = 0.7
 MIN_DISTINCT_VIDEOS_FOR_GENERALIZATION = 3
@@ -30,7 +30,7 @@ INSUFFICIENT_EVIDENCE_MESSAGE = (
 # Configurações do LLM
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
 DEFAULT_TEMPERATURE = 0.2
-DEFAULT_KEEP_ALIVE = "0"
+DEFAULT_KEEP_ALIVE = "1m"
 
 # Prompt do Sistema para RAG Especializado em TikTok Brasil
 PROMPT_TEMPLATE = """Você é o TrendBot-BR, um sistema de consulta e análise factual do corpus de vídeos do TikTok no Brasil. Você não é um assistente geral, nem substitui modelos generalistas.
@@ -60,7 +60,10 @@ REGRAS OBRIGATÓRIAS DE RESPOSTA:
    - O contexto identifica cada evidência pelo "Vídeo ID". Ao afirmar um dado, cite o identificador do vídeo correspondente entre colchetes, por exemplo: [Vídeo ID: 123].
    - Os vídeos recuperados são exemplos, não uma amostra representativa do corpus inteiro. Mesmo três vídeos distintos não permitem concluir qual tipo, tema ou estratégia predomina, gera mais engajamento ou funciona melhor no corpus inteiro.
    - Quando a pergunta pedir formato típico ou padrão, descreva somente características observáveis nos vídeos recuperados. Não trate a expressão "viral" numa descrição como prova de viralidade.
-   - Cada afirmação factual deve citar o ID do vídeo que a sustenta. Se não houver uma fonte direta, use a resposta de informação insuficiente.
+   - Escreva cada afirmação factual em uma frase separada e termine a frase com [Vídeo ID: ...] de uma fonte direta. Não deixe introduções, conclusões ou ressalvas factuais sem citação.
+   - Não afirme que um nome, tema ou formato é comum no corpus inteiro com base apenas nos exemplos recuperados. Perguntas sobre frequência exigem contagem no corpus.
+   - O idioma português e um link do TikTok não comprovam o país do criador ou do público. Refira-se ao corpus selecionado quando a origem brasileira não estiver documentada.
+   - Se não houver uma fonte direta, use a resposta de informação insuficiente.
 
 4. Idioma: português do Brasil claro, preciso e impessoal.
 

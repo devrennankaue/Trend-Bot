@@ -21,6 +21,7 @@ from src import (
     resolver_caminho_db
 )
 from src.corpus_metrics import CorpusMetrics
+from src.config import DEFAULT_RETRIEVAL_K
 
 
 def main():
@@ -47,7 +48,7 @@ def main():
 
     # 2. Configura a busca semântica
     retriever_system = TrendRetriever(persist_directory=db_dir)
-    retriever = retriever_system.get_retriever(k=4) 
+    retriever = retriever_system.get_retriever(k=DEFAULT_RETRIEVAL_K)
 
     # 3. Verificação de Conectividade com o Ollama
     if not checar_conexao_ollama():
@@ -57,7 +58,7 @@ def main():
         print("   - Em um terminal, execute: ollama serve\n")
 
     # 4. Inicia o bot com o único modelo configurado
-    bot = TrendBot(retriever=retriever, keep_alive="0", metrics=CorpusMetrics(csv_path))
+    bot = TrendBot(retriever=retriever, metrics=CorpusMetrics(csv_path))
 
     # 6. Loop do Chat Interativo
     print("="*65)

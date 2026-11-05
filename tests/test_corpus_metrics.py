@@ -134,6 +134,33 @@ class TestCorpusMetrics(unittest.TestCase):
         self.assertEqual(self.metrics.example_summaries(["111"]),
                          {"111": "Homem conta uma piada. O vídeo tem cortes rápidos."})
 
+    def test_assuntos_associados_contam_o_corpus_e_excluem_beleza_incidental(self):
+        with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False,
+                                         encoding="utf-8", newline="") as fixture:
+            path = fixture.name
+            writer = csv.DictWriter(fixture, fieldnames=["IDPostagemFonte", "resumo", "postagem"])
+            writer.writeheader()
+            writer.writerows([
+                {"IDPostagemFonte": "111", "resumo": "Tutorial de maquiagem com coreografia de dança."},
+                {"IDPostagemFonte": "222", "resumo": "Resenha de batom acompanhada de uma piada."},
+                {"IDPostagemFonte": "333", "resumo": "Corredora mostra a beleza das paisagens."},
+                {"IDPostagemFonte": "444", "resumo": "Partida de futebol acompanhada de uma piada."},
+            ])
+        try:
+            answer = CorpusMetrics(path).answer("Que assuntos aparecem junto com conteúdo de beleza?")
+            football_answer = CorpusMetrics(path).answer("Que assuntos aparecem junto com futebol?")
+        finally:
+            os.unlink(path)
+
+        self.assertIn("Nos 2 vídeos relacionados a 'beleza'", answer)
+        self.assertIn("Música e dança: 1 vídeo(s)", answer)
+        self.assertIn("Humor e memes: 1 vídeo(s)", answer)
+        self.assertNotIn("[Vídeo ID: 333]", answer)
+
+        self.assertIn("Nos 1 vídeos relacionados a 'futebol'", football_answer)
+        self.assertIn("Humor e memes: 1 vídeo(s)", football_answer)
+        self.assertNotIn("Esportes:", football_answer)
+
     def test_ranking_de_humor_filtra_resumo_e_explica_videos(self):
         answer = self.metrics.answer("Quais vídeos de humor têm mais visualizações e o que mostram?")
 

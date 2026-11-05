@@ -9,7 +9,8 @@ GENRE_RULES = (
     ("Humor e memes", r"\b(?:humor\w*|comed\w*|comic\w*|piad\w*|meme\w*|engrac\w*)\b"),
     ("Esportes", r"\b(?:esport\w*|futebol|atleta\w*|copa do mundo|basquete|volei|corrida)\b"),
     ("Culinária", r"\b(?:receit\w*|culinari\w*|cozinh\w*|bolo\w*|prato\w*|ingrediente\w*)\b"),
-    ("Beleza e moda", r"\b(?:maquiagem|makeup|skincare|beleza|moda|look\w*|cabelo\w*|roupa\w*)\b"),
+    ("Beleza e moda", r"\b(?:maquiagem|makeup|skincare|cosmetic\w*|batom|blush|"
+     r"hidratante\w*|moda|look\w*|cabelo\w*|roupa\w*)\b"),
     ("Música e dança", r"\b(?:cantor\w*|cantora\w*|cantando|danc\w*|coreografi\w*|clipe\w*|show musical)\b"),
     ("Cinema e séries", r"\b(?:filme\w*|serie\w*|novela\w*|cinema|kdrama|netflix)\b"),
     ("Notícias e política", r"\b(?:notici\w*|politic\w*|governo|eleic\w*|congresso|stf|presidente\w*)\b"),
