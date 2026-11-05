@@ -3,3 +3,10 @@ conteudo_visual,"Que objeto é usado na demonstração de desengasgo de bebês?"
 musica,"Qual é a música registrada no vídeo em que um cachorro preto salta para o ombro de um homem?","RITMADA SAYONARA.",7627594096105753876,conferido_no_csv
 conteudo_visual,"Quem aparece falando diante de microfones em uma coletiva de imprensa?","Edson Fachin.",7629765378280901908,conferido_no_csv
 conteudo_visual,"Qual canção aparece na gravação de tela de um aplicativo de música?","Pot-Pourri: Amor Perfeito / Tá Fazendo Falta / As Quatro Estações.",7630921971563351316,conferido_no_csv
+contagem,"Quantos vídeos há no corpus selecionado?","5000",,conferido_no_csv
+ranking,"Qual vídeo tem mais visualizações no corpus selecionado?","7630892135914540295",,conferido_no_csv
+ranking,"Quais vídeos de humor têm mais visualizações e o que mostram?","7624130624982420752",,conferido_no_csv
+tema,"O que estão falando sobre a Netflix no TikTok?","51 vídeos",,conferido_no_csv
+genero,"Qual gênero de vídeo tem maior taxa de engajamento?","Humor e memes",,classificacao_exploratoria_por_termos
+genero,"Qual tipo de vídeo gera mais engajamento no TikTok?","Humor e memes",,classificacao_exploratoria_por_termos
+sem_resposta,"Quais hashtags são mais frequentes no corpus?","Não há hashtags de postagens preenchidas",,conferido_no_csv

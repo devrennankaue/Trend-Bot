@@ -18,6 +18,8 @@ def main():
     total = 0
     with questions.open(encoding="utf-8", newline="") as question_file:
         for row in csv.DictReader(question_file):
+            if not row["ids_fonte"].strip():
+                continue
             expected = set(row["ids_fonte"].split(";"))
             found = {str(document["metadata"]["video_id"])
                      for document in retriever.search(row["pergunta"])}

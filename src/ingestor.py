@@ -115,10 +115,15 @@ class TrendDataIngestor:
                                        (start, start + len(batch))).fetchone()[0]
             if saved == len(batch):
                 continue
-            vectors = self.embeddings.embed_documents(
-                [document["page_content"] for document in batch]
-            )
+            try:
+                vectors = self.embeddings.embed_documents(
+                    [document["page_content"] for document in batch]
+                )
+            except Exception:
+                connection.close()
+                raise
             if len(vectors) != len(batch):
+                connection.close()
                 raise RuntimeError("O Ollama retornou menos embeddings que trechos no lote.")
             with connection:
                 connection.executemany(

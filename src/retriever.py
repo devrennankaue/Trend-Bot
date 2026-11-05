@@ -3,7 +3,9 @@ import json
 import heapq
 import math
 import os
+import re
 import sqlite3
+import unicodedata
 from contextlib import closing
 from typing import Any, Dict, List, Optional
 
@@ -13,6 +15,10 @@ from .ollama_embeddings import OllamaEmbeddings
 
 
 class TrendRetriever:
+    QUERY_STOPWORDS = {"qual", "quais", "quanto", "quantos", "quantas", "como", "onde",
+                       "quem", "video", "videos", "sobre", "para", "pela", "pelo",
+                       "estao", "esse", "essa", "esses", "essas", "diante", "entre"}
+
     def __init__(self, persist_directory: Optional[str] = None, embeddings: Optional[Any] = None):
         self.persist_directory = resolver_caminho_db(persist_directory)
         self.embeddings = embeddings or OllamaEmbeddings(DEFAULT_EMBEDDING_MODEL, DEFAULT_OLLAMA_URL)
@@ -58,6 +64,50 @@ class TrendRetriever:
         self.hashtag_filter = hashtag_filter
         return self
 
+    def find_examples(self, terms: List[str], limit: int = 3) -> List[Dict[str, Any]]:
+        """Encontra trechos textuais com os termos, sem gerar novos embeddings."""
+        if not terms:
+            return []
+        terms = [self._normalize(term) for term in terms]
+        if self.documents is not None:
+            candidates = ((doc["page_content"], doc["metadata"]) for doc in self.documents)
+        else:
+            connection = sqlite3.connect(self.index_path)
+            candidates = ((content, json.loads(metadata)) for content, metadata in connection.execute(
+                "SELECT page_content, metadata FROM documents"
+            ))
+        best_by_video = {}
+        try:
+            for content, metadata in candidates:
+                video_id = metadata.get("video_id")
+                if not video_id:
+                    continue
+                lowered = self._normalize(content)
+                score = sum(min(lowered.count(term), 2) * (1 + (len(term) >= 7) + (len(term) >= 10))
+                            for term in terms)
+                if score:
+                    score += 4 * ("resumo:" in lowered) + 2 * ("descricao visual:" in lowered)
+                if score > 0 and (video_id not in best_by_video or score > best_by_video[video_id][0]):
+                    best_by_video[video_id] = (score, {"page_content": content, "metadata": metadata})
+        finally:
+            if self.documents is None:
+                connection.close()
+        return [document for _, document in heapq.nlargest(
+            limit, best_by_video.values(), key=lambda item: item[0]
+        )]
+
+    @staticmethod
+    def _normalize(value: str) -> str:
+        decomposed = unicodedata.normalize("NFKD", value.lower())
+        return "".join(char for char in decomposed if not unicodedata.combining(char))
+
+    @classmethod
+    def _query_terms(cls, question: str) -> List[str]:
+        return list(dict.fromkeys(
+            word for word in re.findall(r"\b\w{4,}\b", cls._normalize(question))
+            if word not in cls.QUERY_STOPWORDS
+        ))
+
     @staticmethod
     def _similarity(first: List[float], second: List[float]) -> float:
         product = sum(a * b for a, b in zip(first, second))
@@ -101,4 +151,12 @@ class TrendRetriever:
             selected_video_ids.add(chosen["metadata"].get("video_id"))
             ranked = [item for item in ranked if item[0] is not chosen]
 
-        return selected
+        terms = self._query_terms(question)
+        lexical = self.find_examples(terms, limit=min(self.k, 3))
+        direct = [doc for doc in lexical
+                  if sum(term in self._normalize(doc["page_content"]) for term in terms) >= 2]
+        if direct:
+            direct_ids = {doc["metadata"].get("video_id") for doc in direct[:2]}
+            selected = direct[:2] + [doc for doc in selected
+                                     if doc["metadata"].get("video_id") not in direct_ids]
+        return selected[:self.k]

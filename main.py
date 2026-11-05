@@ -20,6 +20,7 @@ from src import (
     resolver_caminho_csv,
     resolver_caminho_db
 )
+from src.corpus_metrics import CorpusMetrics
 
 
 def main():
@@ -56,7 +57,7 @@ def main():
         print("   - Em um terminal, execute: ollama serve\n")
 
     # 4. Inicia o bot com o único modelo configurado
-    bot = TrendBot(retriever=retriever, keep_alive="0")
+    bot = TrendBot(retriever=retriever, keep_alive="0", metrics=CorpusMetrics(csv_path))
 
     # 6. Loop do Chat Interativo
     print("="*65)
